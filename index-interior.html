@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Style my wall</title>
+    <style>
+        body {
+            background-color: #2e2e2e;
+            color: #f0f0f0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-bottom: 20px;
+            border: none;
+            background-color: #3e3e3e;
+            color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #f0a500;
+            color: #2e2e2e;
+            cursor: pointer;
+        }
+        img {
+            margin-top: 20px;
+            max-width: 80%;
+        }
+        model-viewer {
+            margin-top: 20px;
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Style my wall</h1>
+    <model-viewer src="https://image.picogen.io/202407/26/a/b/ab3dfdc05b391e3aff9e4a1d6a2c27fa.png" ar="" ar-placement="wall" camera-controls="" touch-action="pan-y" alt="A 3D model of some wall art" poster="https://image.picogen.io/202407/26/a/b/ab3dfdc05b391e3aff9e4a1d6a2c27fa.png"></model-viewer>
+    <input type="text" id="prompt" placeholder="Enter your prompt here...">
+    <button onclick="generateImage()">Generate Image</button>
+    <img id="generatedImage" alt="Generated Image" />
+    <model-viewer id="arViewer" src="" ar ar-placement="wall" camera-controls touch-action="pan-y" alt=""></model-viewer>
+
+    <script src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script>
+        const apiToken = "818080b0bdedcad303979d0d4b8b46d4998f74e153aae7bf01c4ceffff8f8ca0";
+
+        async function generateImage() {
+            const prompt = document.getElementById('prompt').value;
+
+            try {
+                // Call the image generate API
+                const generateResponse = await fetch('https://api.picogen.io/v1/job/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'API-Token': apiToken
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        ratio: "16:9",
+                        resolution: "2k",
+                        steps: 20,
+                        guidance: 4.5
+                    })
+                });
+
+                const generateData = await generateResponse.json();
+                const jobId = generateData[1].id;
+
+                let imageUrl = '';
+                while (!imageUrl) {
+                    // Call the get API
+                    const getResponse = await fetch(`https://api.picogen.io/v1/job/get/${jobId}`, {
+                        method: 'GET',
+                        headers: {
+                            'API-Token': apiToken
+                        }
+                    });
+
+                    const getData = await getResponse.json();
+
+                    if (getData[1].status === 'completed') {
+                        imageUrl = getData[1].result;
+                    } else {
+                        // Wait for 2 seconds before the next poll
+                        await new Promise(resolve => setTimeout(resolve, 6000));
+                    }
+                }
+
+                // Display the image
+                const generatedImage = document.getElementById('generatedImage');
+                generatedImage.src = imageUrl;
+
+                // Set the image in model-viewer
+                const arViewer = document.getElementById('arViewer');
+                arViewer.src = imageUrl;
+                arViewer.alt = prompt;
+
+            } catch (error) {
+                console.error('Error generating image:', error);
+            }
+        }
+    </script>
+</body>
+</html>
